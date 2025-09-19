@@ -1,0 +1,47 @@
+version: '3.8'
+
+# Development override for docker-compose.yml
+services:
+  app:
+    build:
+      context: .
+      target: backend
+    volumes:
+      - ./backend:/app/backend
+      - ./frontend/build:/app/frontend/build
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - RELOAD=true
+    command: python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+
+  celery-worker:
+    volumes:
+      - ./backend:/app/backend
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - ENVIRONMENT=development
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+    command: celery -A backend.app.core.celery_app worker --loglevel=debug --reload
+
+  # Development database with exposed port
+  postgres:
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=csrd_rag_dev
+
+  # Development Redis with exposed port  
+  redis:
+    ports:
+      - "6379:6379"
+
+  # Development Chroma with exposed port
+  chroma:
+    ports:
+      - "8001:8001"

@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSRD RAG System</title>
+    <link rel="stylesheet" href="/src/styles/main.css">
+</head>
+<body>
+    <div id="app">
+        <header class="header">
+            <div class="container">
+                <h1>CSRD RAG System</h1>
+                <nav class="nav">
+                    <button class="nav-btn active" data-page="dashboard">Dashboard</button>
+                    <button class="nav-btn" data-page="documents">Documents</button>
+                    <button class="nav-btn" data-page="search">Search</button>
+                    <button class="nav-btn" data-page="rag">RAG Query</button>
+                    <button class="nav-btn" data-page="reports">Reports</button>
+                    <button class="nav-btn" data-page="schemas">Schemas</button>
+                </nav>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="container">
+                <div id="dashboard-page" class="page active">
+                    <h2>Dashboard</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Documents</h3>
+                            <div class="stat-value" id="doc-count">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Text Chunks</h3>
+                            <div class="stat-value" id="chunk-count">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Schemas</h3>
+                            <div class="stat-value" id="schema-count">-</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Reports</h3>
+                            <div class="stat-value" id="report-count">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="documents-page" class="page">
+                    <h2>Document Management</h2>
+                    <div class="upload-section">
+                        <div class="upload-area" id="upload-area">
+                            <p>Drag and drop files here or click to select</p>
+                            <input type="file" id="file-input" multiple accept=".pdf,.docx,.txt" hidden>
+                        </div>
+                        <button id="upload-btn" class="btn btn-primary">Upload Documents</button>
+                    </div>
+                    <div class="documents-list" id="documents-list">
+                        <!-- Documents will be loaded here -->
+                    </div>
+                </div>
+
+                <div id="search-page" class="page">
+                    <h2>Document Search</h2>
+                    <div class="search-section">
+                        <input type="text" id="search-input" placeholder="Enter your search query..." class="search-input">
+                        <button id="search-btn" class="btn btn-primary">Search</button>
+                    </div>
+                    <div class="search-results" id="search-results">
+                        <!-- Search results will appear here -->
+                    </div>
+                </div>
+
+                <div id="rag-page" class="page">
+                    <h2>RAG Question Answering</h2>
+                    <div class="rag-section">
+                        <select id="model-select" class="model-select">
+                            <option value="openai">OpenAI GPT-4</option>
+                            <option value="anthropic">Anthropic Claude</option>
+                            <option value="local">Local Model</option>
+                        </select>
+                        <textarea id="question-input" placeholder="Ask a question about your documents..." class="question-input"></textarea>
+                        <button id="ask-btn" class="btn btn-primary">Ask Question</button>
+                    </div>
+                    <div class="rag-response" id="rag-response">
+                        <!-- RAG responses will appear here -->
+                    </div>
+                </div>
+
+                <div id="reports-page" class="page">
+                    <h2>Report Generation</h2>
+                    <div class="report-section">
+                        <div class="requirements-upload">
+                            <h3>Upload Client Requirements</h3>
+                            <input type="file" id="requirements-input" accept=".txt,.docx,.pdf">
+                            <button id="upload-requirements-btn" class="btn btn-secondary">Upload Requirements</button>
+                        </div>
+                        <div class="report-generation">
+                            <h3>Generate Report</h3>
+                            <select id="template-select" class="template-select">
+                                <option value="eu_esrs">EU ESRS/CSRD</option>
+                                <option value="uk_srd">UK SRD</option>
+                            </select>
+                            <button id="generate-report-btn" class="btn btn-primary">Generate Report</button>
+                        </div>
+                    </div>
+                    <div class="reports-list" id="reports-list">
+                        <!-- Generated reports will appear here -->
+                    </div>
+                </div>
+
+                <div id="schemas-page" class="page">
+                    <h2>Schema Management</h2>
+                    <div class="schemas-list" id="schemas-list">
+                        <!-- Schemas will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div id="loading" class="loading hidden">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

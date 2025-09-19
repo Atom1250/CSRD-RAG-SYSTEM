@@ -1,0 +1,142 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: csrd-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-csrd_rag}
+      POSTGRES_USER: ${POSTGRES_USER:-csrd_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-csrd_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    ports:
+      - "5432:5432"
+    networks:
+      - csrd-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-csrd_user} -d ${POSTGRES_DB:-csrd_rag}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: csrd-redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-redis_password}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - csrd-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Chroma Vector Database
+  chroma:
+    image: chromadb/chroma:latest
+    container_name: csrd-chroma
+    environment:
+      - CHROMA_SERVER_HOST=0.0.0.0
+      - CHROMA_SERVER_HTTP_PORT=8001
+    volumes:
+      - chroma_data:/chroma/chroma
+    ports:
+      - "8001:8001"
+    networks:
+      - csrd-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/v1/heartbeat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Celery Worker
+  celery-worker:
+    build: .
+    container_name: csrd-celery-worker
+    command: celery -A backend.app.core.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-csrd_user}:${POSTGRES_PASSWORD:-csrd_password}@postgres:5432/${POSTGRES_DB:-csrd_rag}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_password}@redis:6379/0
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8001
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chroma:
+        condition: service_healthy
+    networks:
+      - csrd-network
+    restart: unless-stopped
+
+  # Main Application
+  app:
+    build: .
+    container_name: csrd-app
+    environment:
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-csrd_user}:${POSTGRES_PASSWORD:-csrd_password}@postgres:5432/${POSTGRES_DB:-csrd_rag}
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_password}@redis:6379/0
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8001
+      - ENVIRONMENT=${ENVIRONMENT:-development}
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chroma:
+        condition: service_healthy
+    networks:
+      - csrd-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Nginx Reverse Proxy (Production)
+  nginx:
+    image: nginx:alpine
+    container_name: csrd-nginx
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./logs/nginx:/var/log/nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - app
+    networks:
+      - csrd-network
+    restart: unless-stopped
+    profiles:
+      - production
+
+volumes:
+  postgres_data:
+  redis_data:
+  chroma_data:
+
+networks:
+  csrd-network:
+    driver: bridge

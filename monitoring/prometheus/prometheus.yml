@@ -1,0 +1,60 @@
+# Prometheus configuration for CSRD RAG System
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - "alert_rules.yml"
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+          - alertmanager:9093
+
+scrape_configs:
+  # CSRD RAG Application metrics
+  - job_name: 'csrd-app'
+    static_configs:
+      - targets: ['app:8000']
+    metrics_path: '/api/v1/metrics/prometheus'
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+  # System metrics via Node Exporter
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+    scrape_interval: 15s
+
+  # Container metrics via cAdvisor
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+    scrape_interval: 15s
+
+  # PostgreSQL metrics (if postgres_exporter is added)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres-exporter:9187']
+    scrape_interval: 30s
+
+  # Redis metrics (if redis_exporter is added)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis-exporter:9121']
+    scrape_interval: 30s
+
+  # Prometheus self-monitoring
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # Health check endpoints
+  - job_name: 'health-checks'
+    static_configs:
+      - targets: ['app:8000']
+    metrics_path: '/health'
+    scrape_interval: 60s
+    scrape_timeout: 5s

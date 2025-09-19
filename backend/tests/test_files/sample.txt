@@ -1,0 +1,9 @@
+This is a sample text file for testing text extraction functionality.
+
+It contains multiple paragraphs with different types of content.
+
+The text processing service should be able to extract this content and chunk it appropriately for further processing.
+
+This paragraph contains some technical terms related to sustainability reporting, such as CSRD (Corporate Sustainability Reporting Directive) and ESRS (European Sustainability Reporting Standards).
+
+The chunking algorithm should respect sentence boundaries and create meaningful chunks that preserve context for downstream processing.
