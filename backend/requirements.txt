@@ -114,7 +114,7 @@ spacy==3.7.2
 textstat==0.7.3
 
 # API documentation
-python-markdown==3.5.1
+markdown==3.5.1
 
 # Development server
 watchfiles==0.21.0

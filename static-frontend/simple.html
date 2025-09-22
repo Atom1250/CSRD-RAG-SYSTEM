@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSRD RAG System - Simple</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; }
+        .header { background: #2c3e50; color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        .section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .status { padding: 15px; border-radius: 4px; margin: 10px 0; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .warning { background: #fff3cd; color: #856404; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; border: none; border-radius: 4px; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        #backend-port { font-weight: bold; font-size: 1.2em; }
+        .connection-status { position: fixed; top: 20px; right: 20px; padding: 10px 15px; border-radius: 4px; color: white; font-weight: bold; }
+        .connected { background: #28a745; }
+        .disconnected { background: #dc3545; }
+    </style>
+</head>
+<body>
+    <div class="connection-status disconnected" id="connection-status">Connecting...</div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>CSRD RAG System</h1>
+            <p>Simplified Interface</p>
+        </div>
+        
+        <div class="section">
+            <h2>Backend Connection</h2>
+            <p>Status: <span id="backend-status">Checking...</span></p>
+            <p>Port: <span id="backend-port">Detecting...</span></p>
+            <p>URL: <span id="backend-url">Not set</span></p>
+            
+            <button class="btn-primary" onclick="detectBackend()">Detect Backend</button>
+            <button class="btn-success" onclick="testConnection()">Test Connection</button>
+            <button class="btn-danger" onclick="clearStatus()">Clear Status</button>
+        </div>
+        
+        <div class="section">
+            <h2>System Status</h2>
+            <div id="system-status">
+                <div class="status info">Waiting for backend detection...</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>Debug Information</h2>
+            <div id="debug-info">
+                <p>Page loaded at: <span id="load-time"></span></p>
+                <p>User Agent: <span id="user-agent"></span></p>
+                <p>Console logs will appear in browser developer tools (F12)</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Global variables
+        let backendUrl = null;
+        let backendPort = null;
+        
+        // Initialize page
+        document.getElementById('load-time').textContent = new Date().toLocaleString();
+        document.getElementById('user-agent').textContent = navigator.userAgent;
+        
+        console.log('🚀 Simple CSRD RAG System loaded');
+        console.log('📊 Document ready state:', document.readyState);
+        
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('system-status');
+            statusEl.innerHTML = `<div class="status ${type}">${message}</div>`;
+            console.log(`📊 Status: ${message}`);
+        }
+        
+        function clearStatus() {
+            document.getElementById('system-status').innerHTML = '<div class="status info">Status cleared</div>';
+        }
+        
+        function updateConnectionUI(connected, port = null) {
+            const statusEl = document.getElementById('connection-status');
+            const backendStatusEl = document.getElementById('backend-status');
+            const backendPortEl = document.getElementById('backend-port');
+            const backendUrlEl = document.getElementById('backend-url');
+            
+            if (connected && port) {
+                statusEl.textContent = `Connected (Port ${port})`;
+                statusEl.className = 'connection-status connected';
+                backendStatusEl.textContent = '✅ Connected';
+                backendStatusEl.style.color = '#28a745';
+                backendPortEl.textContent = port;
+                backendPortEl.style.color = '#28a745';
+                backendUrlEl.textContent = `http://localhost:${port}`;
+            } else {
+                statusEl.textContent = 'Disconnected';
+                statusEl.className = 'connection-status disconnected';
+                backendStatusEl.textContent = '❌ Disconnected';
+                backendStatusEl.style.color = '#dc3545';
+                backendPortEl.textContent = 'Not found';
+                backendPortEl.style.color = '#dc3545';
+                backendUrlEl.textContent = 'Not set';
+            }
+        }
+        
+        async function detectBackend() {
+            console.log('🔍 Starting backend detection...');
+            updateStatus('🔍 Detecting backend...', 'info');
+            updateConnectionUI(false);
+            
+            const ports = [63953, 62871, 61076, 61038, 60145, 8000, 8002, 8080];
+            
+            for (let i = 0; i < ports.length; i++) {
+                const port = ports[i];
+                
+                try {
+                    console.log(`🔍 Testing port ${port} (${i + 1}/${ports.length})`);
+                    updateStatus(`🔍 Testing port ${port} (${i + 1}/${ports.length})...`, 'info');
+                    
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => {
+                        console.log(`⏰ Timeout for port ${port}`);
+                        controller.abort();
+                    }, 4000);
+                    
+                    const response = await fetch(`http://localhost:${port}/health`, {
+                        method: 'GET',
+                        mode: 'cors',
+                        signal: controller.signal,
+                        headers: {
+                            'Accept': 'application/json',
+                        }
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        backendUrl = `http://localhost:${port}`;
+                        backendPort = port;
+                        
+                        console.log(`✅ Backend found on port ${port}`, data);
+                        updateStatus(`✅ Backend detected on port ${port}`, 'success');
+                        updateConnectionUI(true, port);
+                        
+                        return; // Success, exit the loop
+                    } else {
+                        console.log(`❌ Port ${port}: HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    console.log(`❌ Port ${port}: ${error.message}`);
+                    if (error.name === 'AbortError') {
+                        console.log(`⏰ Port ${port} timed out`);
+                    }
+                }
+            }
+            
+            // If we get here, no backend was found
+            console.error('❌ No backend found on any port');
+            updateStatus('❌ Backend not found on any port. Please ensure the backend is running.', 'error');
+            updateConnectionUI(false);
+        }
+        
+        async function testConnection() {
+            if (!backendUrl) {
+                updateStatus('❌ No backend URL available. Please detect backend first.', 'error');
+                return;
+            }
+            
+            console.log(`🧪 Testing connection to ${backendUrl}`);
+            updateStatus('🧪 Testing backend connection...', 'info');
+            
+            try {
+                const response = await fetch(`${backendUrl}/health`);
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStatus(`✅ Connection test successful`, 'success');
+                    console.log('✅ Connection test result:', data);
+                } else {
+                    updateStatus(`❌ Connection test failed: HTTP ${response.status}`, 'error');
+                }
+            } catch (error) {
+                updateStatus(`❌ Connection test failed: ${error.message}`, 'error');
+                console.error('Connection test error:', error);
+            }
+        }
+        
+        // Auto-detect on page load
+        window.addEventListener('load', () => {
+            console.log('📄 Page fully loaded, starting auto-detection...');
+            setTimeout(() => {
+                detectBackend();
+            }, 1000);
+        });
+        
+        console.log('✅ Simple app setup complete');
+    </script>
+</body>
+</html>

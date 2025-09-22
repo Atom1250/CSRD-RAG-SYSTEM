@@ -23,13 +23,19 @@ class Settings(BaseSettings):
     # Database settings
     database_url: str = "sqlite:///./data/csrd_rag.db"
     database_echo: bool = False
+    postgres_user: str = "csrd_user"
+    postgres_password: str = "csrd_password"
+    postgres_db: str = "csrd_rag"
     
     # Redis settings (for caching and Celery)
     redis_url: str = "redis://localhost:6379/0"
+    redis_password: str = "redis_password"
     
     # Vector database settings
     vector_db_type: str = "chroma"  # chroma or pinecone
     chroma_persist_directory: str = "./data/chroma_db"
+    chroma_host: str = "localhost"
+    chroma_port: int = 8001
     pinecone_api_key: Optional[str] = None
     pinecone_environment: Optional[str] = None
     
@@ -89,7 +95,7 @@ class Settings(BaseSettings):
         return v
     
     model_config = {
-        "env_file": ".env",
+        "env_file": "../.env",
         "env_file_encoding": "utf-8",
         "case_sensitive": False
     }

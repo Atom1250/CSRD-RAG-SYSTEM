@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSRD RAG System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            display: inline-block;
+            margin-right: 2rem;
+        }
+
+        .nav {
+            display: inline-block;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            margin: 0 0.25rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        .nav-btn:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .nav-btn.active {
+            background-color: #3498db;
+        }
+
+        .main {
+            padding: 2rem 0;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .page h2 {
+            margin-bottom: 1.5rem;
+            color: #2c3e50;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+            margin: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .status {
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+        }
+
+        .connection-status.connected {
+            background-color: #27ae60;
+        }
+
+        .connection-status.disconnected {
+            background-color: #e74c3c;
+        }
+
+        #backend-port {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+
+        .input-group {
+            margin: 1rem 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .input-group input, .input-group textarea, .input-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .input-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .results {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+            border-left: 4px solid #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status disconnected" id="connection-status">
+        Connecting...
+    </div>
+
+    <div id="app">
+        <header class="header">
+            <div class="container">
+                <h1>CSRD RAG System</h1>
+                <nav class="nav">
+                    <button class="nav-btn active" data-page="dashboard">Dashboard</button>
+                    <button class="nav-btn" data-page="system">System Test</button>
+                    <button class="nav-btn" data-page="documents">Documents</button>
+                    <button class="nav-btn" data-page="search">Search</button>
+                    <button class="nav-btn" data-page="rag">RAG Query</button>
+                    <button class="nav-btn" data-page="reports">Reports</button>
+                </nav>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="container">
+                <!-- Dashboard Page -->
+                <div id="dashboard-page" class="page active">
+                    <h2>Dashboard</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Backend Status</h3>
+                            <div class="stat-value" id="backend-status">Checking...</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Database</h3>
+                            <div class="stat-value" id="db-status">Checking...</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Redis</h3>
+                            <div class="stat-value" id="redis-status">Checking...</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>OpenAI API</h3>
+                            <div class="stat-value" id="openai-status">Checking...</div>
+                        </div>
+                    </div>
+                    <div class="section">
+                        <h3>Backend Connection</h3>
+                        <p>Backend Port: <span id="backend-port">Auto-detecting...</span></p>
+                        <button class="btn btn-primary" onclick="detectBackend()">Detect Backend</button>
+                        <button class="btn btn-success" onclick="testAllConnections()">Test All Systems</button>
+                    </div>
+                </div>
+
+                <!-- System Test Page -->
+                <div id="system-page" class="page">
+                    <h2>System Tests</h2>
+                    <div class="section">
+                        <h3>Connection Tests</h3>
+                        <button class="btn btn-primary" onclick="testDatabase()">Test Database</button>
+                        <button class="btn btn-primary" onclick="testRedis()">Test Redis</button>
+                        <button class="btn btn-primary" onclick="testOpenAI()">Test OpenAI</button>
+                        <div id="test-results"></div>
+                    </div>
+                </div>
+
+                <!-- Documents Page -->
+                <div id="documents-page" class="page">
+                    <h2>Document Management</h2>
+                    <div class="section">
+                        <h3>Upload Documents</h3>
+                        <div class="input-group">
+                            <label>Select Files:</label>
+                            <input type="file" id="file-input" multiple accept=".pdf,.docx,.txt">
+                        </div>
+                        <button class="btn btn-primary" onclick="uploadDocuments()">Upload</button>
+                        <div id="upload-results"></div>
+                    </div>
+                </div>
+
+                <!-- Search Page -->
+                <div id="search-page" class="page">
+                    <h2>Document Search</h2>
+                    <div class="section">
+                        <div class="input-group">
+                            <label>Search Query:</label>
+                            <input type="text" id="search-input" placeholder="Enter your search query...">
+                        </div>
+                        <button class="btn btn-primary" onclick="searchDocuments()">Search</button>
+                        <div id="search-results"></div>
+                    </div>
+                </div>
+
+                <!-- RAG Page -->
+                <div id="rag-page" class="page">
+                    <h2>RAG Question Answering</h2>
+                    <div class="section">
+                        <div class="input-group">
+                            <label>AI Model:</label>
+                            <select id="model-select">
+                                <option value="openai">OpenAI GPT-4</option>
+                                <option value="anthropic">Anthropic Claude</option>
+                                <option value="local">Local Model</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Question:</label>
+                            <textarea id="question-input" placeholder="Ask a question about your documents..."></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="askQuestion()">Ask Question</button>
+                        <div id="rag-results"></div>
+                    </div>
+                </div>
+
+                <!-- Reports Page -->
+                <div id="reports-page" class="page">
+                    <h2>Report Generation</h2>
+                    <div class="section">
+                        <div class="input-group">
+                            <label>Report Template:</label>
+                            <select id="template-select">
+                                <option value="eu_esrs">EU ESRS/CSRD</option>
+                                <option value="uk_srd">UK SRD</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="generateReport()">Generate Report</button>
+                        <div id="report-results"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Global variables - same as working simple page
+        let backendUrl = null;
+        let backendPort = null;
+        let currentPage = 'dashboard';
+
+        console.log('🚀 CSRD RAG System loaded');
+
+        // Navigation functions - same pattern as simple page
+        function setupNavigation() {
+            const navButtons = document.querySelectorAll('.nav-btn');
+            navButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const page = e.target.getAttribute('data-page');
+                    if (page) {
+                        loadPage(page);
+                    }
+                });
+            });
+        }
+
+        function loadPage(pageName) {
+            // Hide all pages
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => page.classList.remove('active'));
+
+            // Show selected page
+            const targetPage = document.getElementById(`${pageName}-page`);
+            if (targetPage) {
+                targetPage.classList.add('active');
+            }
+
+            // Update navigation
+            const navButtons = document.querySelectorAll('.nav-btn');
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            
+            const activeBtn = document.querySelector(`[data-page="${pageName}"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
+
+            currentPage = pageName;
+            console.log(`📄 Loaded page: ${pageName}`);
+        }
+
+        function updateConnectionStatus(connected, port = null) {
+            const statusEl = document.getElementById('connection-status');
+            
+            if (connected && port) {
+                statusEl.textContent = `Connected (Port ${port})`;
+                statusEl.className = 'connection-status connected';
+            } else {
+                statusEl.textContent = 'Disconnected';
+                statusEl.className = 'connection-status disconnected';
+            }
+        }
+
+        // Backend detection - EXACT same code as working simple page
+        async function detectBackend() {
+            console.log('🔍 Starting backend detection...');
+            updateConnectionStatus(false);
+            
+            const backendPortEl = document.getElementById('backend-port');
+            if (backendPortEl) {
+                backendPortEl.textContent = 'Detecting...';
+            }
+            
+            const ports = [62871, 61076, 61038, 60145, 8000, 8002, 8080];
+            
+            for (let i = 0; i < ports.length; i++) {
+                const port = ports[i];
+                
+                try {
+                    console.log(`🔍 Testing port ${port} (${i + 1}/${ports.length})`);
+                    
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => {
+                        console.log(`⏰ Timeout for port ${port}`);
+                        controller.abort();
+                    }, 4000);
+                    
+                    const response = await fetch(`http://localhost:${port}/health`, {
+                        method: 'GET',
+                        mode: 'cors',
+                        signal: controller.signal,
+                        headers: {
+                            'Accept': 'application/json',
+                        }
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        backendUrl = `http://localhost:${port}`;
+                        backendPort = port;
+                        
+                        console.log(`✅ Backend found on port ${port}`, data);
+                        updateConnectionStatus(true, port);
+                        
+                        if (backendPortEl) {
+                            backendPortEl.textContent = port;
+                            backendPortEl.style.color = '#27ae60';
+                        }
+                        
+                        // Test all connections
+                        await testAllConnections();
+                        return; // Success, exit the loop
+                    } else {
+                        console.log(`❌ Port ${port}: HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    console.log(`❌ Port ${port}: ${error.message}`);
+                    if (error.name === 'AbortError') {
+                        console.log(`⏰ Port ${port} timed out`);
+                    }
+                }
+            }
+            
+            // If we get here, no backend was found
+            console.error('❌ No backend found on any port');
+            updateConnectionStatus(false);
+            
+            if (backendPortEl) {
+                backendPortEl.textContent = 'Not found';
+                backendPortEl.style.color = '#e74c3c';
+            }
+        }
+
+        // API request function
+        async function apiRequest(endpoint, options = {}) {
+            if (!backendUrl) {
+                throw new Error('Backend not detected');
+            }
+
+            const url = `${backendUrl}${endpoint}`;
+            const config = {
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...options.headers,
+                },
+                ...options,
+            };
+
+            console.log(`🌐 API Request: ${options.method || 'GET'} ${url}`);
+            
+            const response = await fetch(url, config);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        }
+
+        // Test functions
+        async function testAllConnections() {
+            console.log('🧪 Testing all connections...');
+            
+            try {
+                // Test backend health
+                const health = await apiRequest('/health');
+                document.getElementById('backend-status').textContent = '✅ Online';
+                document.getElementById('backend-status').style.color = '#27ae60';
+                
+                // Test database
+                try {
+                    const dbTest = await apiRequest('/api/test-db');
+                    document.getElementById('db-status').textContent = '✅ Connected';
+                    document.getElementById('db-status').style.color = '#27ae60';
+                } catch (error) {
+                    document.getElementById('db-status').textContent = '❌ Error';
+                    document.getElementById('db-status').style.color = '#e74c3c';
+                }
+                
+                // Test Redis
+                try {
+                    const redisTest = await apiRequest('/api/test-redis');
+                    document.getElementById('redis-status').textContent = '✅ Connected';
+                    document.getElementById('redis-status').style.color = '#27ae60';
+                } catch (error) {
+                    document.getElementById('redis-status').textContent = '❌ Error';
+                    document.getElementById('redis-status').style.color = '#e74c3c';
+                }
+                
+                // Test OpenAI
+                try {
+                    const openaiTest = await apiRequest('/api/test-openai');
+                    if (openaiTest.api_key_valid) {
+                        document.getElementById('openai-status').textContent = '✅ Connected';
+                        document.getElementById('openai-status').style.color = '#27ae60';
+                    } else {
+                        document.getElementById('openai-status').textContent = '⚠️ Invalid Key';
+                        document.getElementById('openai-status').style.color = '#f39c12';
+                    }
+                } catch (error) {
+                    document.getElementById('openai-status').textContent = '❌ Error';
+                    document.getElementById('openai-status').style.color = '#e74c3c';
+                }
+                
+            } catch (error) {
+                document.getElementById('backend-status').textContent = '❌ Offline';
+                document.getElementById('backend-status').style.color = '#e74c3c';
+                console.error('Connection test failed:', error);
+            }
+        }
+
+        async function testDatabase() {
+            showLoading('test-results');
+            try {
+                const result = await apiRequest('/api/test-db');
+                showResults('test-results', 'success', 'Database Test', result);
+            } catch (error) {
+                showResults('test-results', 'error', 'Database Test Failed', { error: error.message });
+            }
+        }
+
+        async function testRedis() {
+            showLoading('test-results');
+            try {
+                const result = await apiRequest('/api/test-redis');
+                showResults('test-results', 'success', 'Redis Test', result);
+            } catch (error) {
+                showResults('test-results', 'error', 'Redis Test Failed', { error: error.message });
+            }
+        }
+
+        async function testOpenAI() {
+            showLoading('test-results');
+            try {
+                const result = await apiRequest('/api/test-openai');
+                showResults('test-results', result.api_key_valid ? 'success' : 'error', 'OpenAI Test', result);
+            } catch (error) {
+                showResults('test-results', 'error', 'OpenAI Test Failed', { error: error.message });
+            }
+        }
+
+        // Placeholder functions for other features
+        async function uploadDocuments() {
+            showResults('upload-results', 'info', 'Upload Feature', { message: 'Document upload ready for implementation' });
+        }
+
+        async function searchDocuments() {
+            showResults('search-results', 'info', 'Search Feature', { message: 'Document search ready for implementation' });
+        }
+
+        async function askQuestion() {
+            showResults('rag-results', 'info', 'RAG Feature', { message: 'RAG query ready for implementation' });
+        }
+
+        async function generateReport() {
+            showResults('report-results', 'info', 'Report Feature', { message: 'Report generation ready for implementation' });
+        }
+
+        // Utility functions
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = '<div class="status info">Loading...</div>';
+            }
+        }
+
+        function showResults(elementId, type, title, data) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = `
+                    <div class="status ${type}">
+                        <h4>${title}</h4>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialize - EXACT same pattern as working simple page
+        window.addEventListener('load', () => {
+            console.log('📄 Page fully loaded, starting app...');
+            
+            // Setup navigation
+            setupNavigation();
+            
+            // Load dashboard
+            loadPage('dashboard');
+            
+            // Auto-detect backend
+            setTimeout(() => {
+                detectBackend();
+            }, 1000);
+        });
+
+        console.log('✅ CSRD RAG System setup complete');
+    </script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug - CSRD RAG System</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { padding: 10px; margin: 10px 0; border-radius: 4px; }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+    <h1>CSRD RAG System - Debug Mode</h1>
+    
+    <div id="status">Initializing...</div>
+    
+    <button onclick="testDetection()">Test Backend Detection</button>
+    <button onclick="testSpecificPort()">Test Port 62871</button>
+    <button onclick="clearResults()">Clear Results</button>
+    
+    <div id="results"></div>
+    
+    <script>
+        console.log('🐛 Debug page loaded');
+        
+        let backendUrl = null;
+        let backendPort = null;
+        
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            console.log(`📊 Status: ${message}`);
+        }
+        
+        function addResult(message, data = null) {
+            const resultsEl = document.getElementById('results');
+            const resultDiv = document.createElement('div');
+            resultDiv.innerHTML = `
+                <div class="status info">
+                    <strong>${new Date().toLocaleTimeString()}</strong>: ${message}
+                    ${data ? `<pre>${JSON.stringify(data, null, 2)}</pre>` : ''}
+                </div>
+            `;
+            resultsEl.appendChild(resultDiv);
+        }
+        
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+        }
+        
+        async function testSpecificPort() {
+            const port = 62871;
+            updateStatus(`Testing port ${port}...`, 'info');
+            
+            try {
+                console.log(`🔍 Testing port ${port}`);
+                
+                const response = await fetch(`http://localhost:${port}/health`, {
+                    method: 'GET',
+                    mode: 'cors',
+                    headers: {
+                        'Accept': 'application/json',
+                    }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    backendUrl = `http://localhost:${port}`;
+                    backendPort = port;
+                    
+                    updateStatus(`✅ Connected to backend on port ${port}`, 'success');
+                    addResult(`Backend found on port ${port}`, data);
+                    
+                    // Test additional endpoints
+                    await testEndpoints();
+                } else {
+                    updateStatus(`❌ Port ${port} returned HTTP ${response.status}`, 'error');
+                    addResult(`Port ${port} failed with status ${response.status}`);
+                }
+            } catch (error) {
+                updateStatus(`❌ Port ${port} connection failed: ${error.message}`, 'error');
+                addResult(`Port ${port} error`, { error: error.message, stack: error.stack });
+                console.error('Connection error:', error);
+            }
+        }
+        
+        async function testDetection() {
+            updateStatus('Starting backend detection...', 'info');
+            clearResults();
+            
+            const ports = [63953, 62871, 61076, 61038, 60145, 8000, 8002];
+            
+            for (const port of ports) {
+                try {
+                    console.log(`🔍 Testing port ${port}`);
+                    addResult(`Testing port ${port}...`);
+                    
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 3000);
+                    
+                    const response = await fetch(`http://localhost:${port}/health`, {
+                        method: 'GET',
+                        mode: 'cors',
+                        signal: controller.signal,
+                        headers: {
+                            'Accept': 'application/json',
+                        }
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        backendUrl = `http://localhost:${port}`;
+                        backendPort = port;
+                        
+                        updateStatus(`✅ Backend detected on port ${port}`, 'success');
+                        addResult(`✅ Backend found on port ${port}`, data);
+                        
+                        // Test additional endpoints
+                        await testEndpoints();
+                        return;
+                    } else {
+                        addResult(`❌ Port ${port}: HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    addResult(`❌ Port ${port}: ${error.message}`);
+                    console.log(`Port ${port} failed:`, error.message);
+                }
+            }
+            
+            updateStatus('❌ No backend found on any port', 'error');
+            addResult('❌ Backend detection failed - no ports responding');
+        }
+        
+        async function testEndpoints() {
+            if (!backendUrl) {
+                addResult('❌ No backend URL available for endpoint testing');
+                return;
+            }
+            
+            const endpoints = [
+                '/api/test-db',
+                '/api/test-redis', 
+                '/api/test-openai',
+                '/api/schemas'
+            ];
+            
+            for (const endpoint of endpoints) {
+                try {
+                    const response = await fetch(`${backendUrl}${endpoint}`, {
+                        method: 'GET',
+                        mode: 'cors',
+                        headers: {
+                            'Accept': 'application/json',
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        addResult(`✅ ${endpoint}`, data);
+                    } else {
+                        addResult(`❌ ${endpoint}: HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    addResult(`❌ ${endpoint}: ${error.message}`);
+                }
+            }
+        }
+        
+        // Auto-run detection on page load
+        window.addEventListener('load', () => {
+            console.log('🚀 Debug page fully loaded, starting detection...');
+            setTimeout(testDetection, 1000);
+        });
+        
+        console.log('🐛 Debug script setup complete');
+    </script>
+</body>
+</html>

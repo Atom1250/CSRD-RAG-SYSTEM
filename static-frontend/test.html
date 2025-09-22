@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Backend Connection Test</title>
+</head>
+<body>
+    <h1>Backend Connection Test</h1>
+    <div id="results"></div>
+    
+    <script>
+        async function testConnection() {
+            const results = document.getElementById('results');
+            results.innerHTML = '<p>Testing connections...</p>';
+            
+            const ports = [62871, 61076, 61038, 60145, 8000];
+            
+            for (const port of ports) {
+                try {
+                    console.log(`Testing port ${port}...`);
+                    
+                    const response = await fetch(`http://localhost:${port}/health`, {
+                        method: 'GET',
+                        mode: 'cors',
+                        headers: {
+                            'Accept': 'application/json',
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        results.innerHTML += `<p style="color: green;">✅ Port ${port}: Connected</p>`;
+                        results.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                        break;
+                    } else {
+                        results.innerHTML += `<p style="color: orange;">⚠️ Port ${port}: HTTP ${response.status}</p>`;
+                    }
+                } catch (error) {
+                    results.innerHTML += `<p style="color: red;">❌ Port ${port}: ${error.message}</p>`;
+                    console.error(`Port ${port} error:`, error);
+                }
+            }
+        }
+        
+        // Test on page load
+        testConnection();
+    </script>
+</body>
+</html>

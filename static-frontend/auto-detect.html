@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Auto-Detect Backend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Backend Auto-Detection</h1>
+    <div id="status">Scanning for backend...</div>
+    <div id="results"></div>
+
+    <script>
+        async function findBackend() {
+            const statusEl = document.getElementById('status');
+            const resultsEl = document.getElementById('results');
+
+            // Scan a wide range of ports
+            const portRanges = [
+                // Current known ports
+                [63953, 62871, 61076, 61038, 60145],
+                // Common development ports
+                [8000, 8001, 8002, 8080, 8888, 9000],
+                // Dynamic port range (common for auto-assigned ports)
+                ...Array.from({ length: 20 }, (_, i) => 60000 + i * 100),
+                ...Array.from({ length: 20 }, (_, i) => 61000 + i * 100),
+                ...Array.from({ length: 20 }, (_, i) => 62000 + i * 100),
+                ...Array.from({ length: 20 }, (_, i) => 63000 + i * 100),
+                ...Array.from({ length: 20 }, (_, i) => 64000 + i * 100)
+            ];
+
+            const allPorts = portRanges.flat();
+
+            statusEl.innerHTML = `<div class="status info">Scanning ${allPorts.length} ports...</div>`;
+
+            for (let i = 0; i < allPorts.length; i++) {
+                const port = allPorts[i];
+
+                try {
+                    statusEl.innerHTML = `<div class="status info">Testing port ${port} (${i + 1}/${allPorts.length})</div>`;
+
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 1000);
+
+                    const response = await fetch(`http://localhost:${port}/health`, {
+                        method: 'GET',
+                        mode: 'cors',
+                        signal: controller.signal,
+                        headers: { 'Accept': 'application/json' }
+                    });
+
+                    clearTimeout(timeoutId);
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data.status === 'healthy') {
+                            statusEl.innerHTML = `<div class="status success">✅ Backend found on port ${port}!</div>`;
+                            resultsEl.innerHTML = `
+                                <div class="status success">
+                                    <h3>Backend Details:</h3>
+                                    <p><strong>Port:</strong> ${port}</p>
+                                    <p><strong>URL:</strong> http://localhost:${port}</p>
+                                    <p><strong>Status:</strong> ${data.status}</p>
+                                    <p><strong>Database:</strong> ${data.database_configured ? '✅ Connected' : '❌ Not connected'}</p>
+                                    <p><strong>Redis:</strong> ${data.redis_configured ? '✅ Connected' : '❌ Not connected'}</p>
+                                    <p><strong>OpenAI:</strong> ${data.openai_configured ? '✅ Configured' : '❌ Not configured'}</p>
+                                    <br>
+                                    <p><strong>Update your frontend to use port ${port}</strong></p>
+                                    <p><a href="http://localhost:62646" target="_blank">Open Main App</a></p>
+                                </div>
+                            `;
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    // Port not responding, continue
+                }
+            }
+
+            statusEl.innerHTML = `<div class="status error">❌ No backend found on any port</div>`;
+            resultsEl.innerHTML = `
+                <div class="status error">
+                    <h3>Backend Not Found</h3>
+                    <p>Please ensure the backend is running:</p>
+                    <pre>cd backend && python3 simple_main.py</pre>
+                </div>
+            `;
+        }
+
+        // Start scanning immediately
+        findBackend();
+    </script>
+</body>
+
+</html>

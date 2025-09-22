@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSRD RAG System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .header {
+            background: #2c3e50;
+            color: white;
+            padding: 1rem 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            display: inline-block;
+            margin-right: 2rem;
+        }
+
+        .nav {
+            display: inline-block;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: white;
+            padding: 0.5rem 1rem;
+            margin: 0 0.25rem;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        .nav-btn:hover {
+            background-color: rgba(255,255,255,0.1);
+        }
+
+        .nav-btn.active {
+            background-color: #3498db;
+        }
+
+        .main {
+            padding: 2rem 0;
+        }
+
+        .page {
+            display: none;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        .page h2 {
+            margin-bottom: 1.5rem;
+            color: #2c3e50;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .section {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: background-color 0.3s;
+            margin: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: #e74c3c;
+            color: white;
+        }
+
+        .status {
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+
+        .status.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status.info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .connection-status {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 15px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            z-index: 1000;
+        }
+
+        .connection-status.connected {
+            background-color: #27ae60;
+        }
+
+        .connection-status.disconnected {
+            background-color: #e74c3c;
+        }
+
+        #backend-port {
+            font-weight: bold;
+            color: #e74c3c;
+        }
+
+        .input-group {
+            margin: 1rem 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+        }
+
+        .input-group input, .input-group textarea, .input-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        .input-group textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .results {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+            border-left: 4px solid #3498db;
+        }
+
+        .result-item:hover {
+            background: #e9ecef !important;
+            cursor: pointer;
+        }
+
+        .document-card:hover {
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+            transition: all 0.3s ease;
+        }
+
+        .rag-response {
+            font-family: Georgia, serif;
+            line-height: 1.8;
+        }
+
+        .documents-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1rem;
+        }
+
+        pre {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .status pre {
+            font-size: 0.9em;
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .input-group input:focus,
+        .input-group textarea:focus,
+        .input-group select:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <div class="connection-status disconnected" id="connection-status">
+        Connecting...
+    </div>
+
+    <div id="app">
+        <header class="header">
+            <div class="container">
+                <h1>CSRD RAG System</h1>
+                <nav class="nav">
+                    <button class="nav-btn active" data-page="dashboard">Dashboard</button>
+                    <button class="nav-btn" data-page="system">System Test</button>
+                    <button class="nav-btn" data-page="documents">Documents</button>
+                    <button class="nav-btn" data-page="search">Search</button>
+                    <button class="nav-btn" data-page="rag">RAG Query</button>
+                    <button class="nav-btn" data-page="reports">Reports</button>
+                </nav>
+            </div>
+        </header>
+
+        <main class="main">
+            <div class="container">
+                <!-- Dashboard Page -->
+                <div id="dashboard-page" class="page active">
+                    <h2>Dashboard</h2>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h3>Backend Status</h3>
+                            <div class="stat-value" id="backend-status">Checking...</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Database</h3>
+                            <div class="stat-value" id="db-status">Checking...</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>Redis</h3>
+                            <div class="stat-value" id="redis-status">Checking...</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>OpenAI API</h3>
+                            <div class="stat-value" id="openai-status">Checking...</div>
+                        </div>
+                    </div>
+                    <div class="section">
+                        <h3>Backend Connection</h3>
+                        <p>Backend Port: <span id="backend-port">Auto-detecting...</span></p>
+                        <button class="btn btn-primary" onclick="detectBackend()">Detect Backend</button>
+                        <button class="btn btn-success" onclick="testAllConnections()">Test All Systems</button>
+                    </div>
+                </div>
+
+                <!-- System Test Page -->
+                <div id="system-page" class="page">
+                    <h2>System Tests</h2>
+                    <div class="section">
+                        <h3>Connection Tests</h3>
+                        <button class="btn btn-primary" onclick="testDatabase()">Test Database</button>
+                        <button class="btn btn-primary" onclick="testRedis()">Test Redis</button>
+                        <button class="btn btn-primary" onclick="testOpenAI()">Test OpenAI</button>
+                        <div id="test-results"></div>
+                    </div>
+                </div>
+
+                <!-- Documents Page -->
+                <div id="documents-page" class="page">
+                    <h2>Document Management</h2>
+                    <div class="section">
+                        <h3>Upload Documents</h3>
+                        <div class="input-group">
+                            <label>Select Files:</label>
+                            <input type="file" id="file-input" multiple accept=".pdf,.docx,.txt">
+                        </div>
+                        <button class="btn btn-primary" onclick="uploadDocuments()">Upload</button>
+                        <div id="upload-results"></div>
+                    </div>
+                </div>
+
+                <!-- Search Page -->
+                <div id="search-page" class="page">
+                    <h2>Document Search</h2>
+                    <div class="section">
+                        <div class="input-group">
+                            <label>Search Query:</label>
+                            <input type="text" id="search-input" placeholder="Enter your search query...">
+                        </div>
+                        <button class="btn btn-primary" onclick="searchDocuments()">Search</button>
+                        <div id="search-results"></div>
+                    </div>
+                </div>
+
+                <!-- RAG Page -->
+                <div id="rag-page" class="page">
+                    <h2>RAG Question Answering</h2>
+                    <div class="section">
+                        <div class="input-group">
+                            <label>AI Model:</label>
+                            <select id="model-select">
+                                <option value="openai">OpenAI GPT-4</option>
+                                <option value="anthropic">Anthropic Claude</option>
+                                <option value="local">Local Model</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>Question:</label>
+                            <textarea id="question-input" placeholder="Ask a question about your documents..."></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="askQuestion()">Ask Question</button>
+                        <div id="rag-results"></div>
+                    </div>
+                </div>
+
+                <!-- Reports Page -->
+                <div id="reports-page" class="page">
+                    <h2>Report Generation</h2>
+                    <div class="section">
+                        <div class="input-group">
+                            <label>Report Template:</label>
+                            <select id="template-select">
+                                <option value="eu_esrs">EU ESRS/CSRD</option>
+                                <option value="uk_srd">UK SRD</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" onclick="generateReport()">Generate Report</button>
+                        <div id="report-results"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // Global variables - same as working simple page
+        let backendUrl = null;
+        let backendPort = null;
+        let currentPage = 'dashboard';
+
+        console.log('🚀 CSRD RAG System loaded');
+
+        // Navigation functions - same pattern as simple page
+        function setupNavigation() {
+            const navButtons = document.querySelectorAll('.nav-btn');
+            navButtons.forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const page = e.target.getAttribute('data-page');
+                    if (page) {
+                        loadPage(page);
+                    }
+                });
+            });
+        }
+
+        function loadPage(pageName) {
+            // Hide all pages
+            const pages = document.querySelectorAll('.page');
+            pages.forEach(page => page.classList.remove('active'));
+
+            // Show selected page
+            const targetPage = document.getElementById(`${pageName}-page`);
+            if (targetPage) {
+                targetPage.classList.add('active');
+            }
+
+            // Update navigation
+            const navButtons = document.querySelectorAll('.nav-btn');
+            navButtons.forEach(btn => btn.classList.remove('active'));
+            
+            const activeBtn = document.querySelector(`[data-page="${pageName}"]`);
+            if (activeBtn) {
+                activeBtn.classList.add('active');
+            }
+
+            currentPage = pageName;
+            console.log(`📄 Loaded page: ${pageName}`);
+            
+            // Load page-specific content
+            if (pageName === 'documents' && backendUrl) {
+                loadDocumentsList();
+            }
+        }
+
+        function updateConnectionStatus(connected, port = null) {
+            const statusEl = document.getElementById('connection-status');
+            
+            if (connected && port) {
+                statusEl.textContent = `Connected (Port ${port})`;
+                statusEl.className = 'connection-status connected';
+            } else {
+                statusEl.textContent = 'Disconnected';
+                statusEl.className = 'connection-status disconnected';
+            }
+        }
+
+        // Backend detection - EXACT same code as working simple page
+        async function detectBackend() {
+            console.log('🔍 Starting backend detection...');
+            updateConnectionStatus(false);
+            
+            const backendPortEl = document.getElementById('backend-port');
+            if (backendPortEl) {
+                backendPortEl.textContent = 'Detecting...';
+            }
+            
+            const ports = [51705, 51637, 51577, 50222, 63953, 62871, 61076, 61038, 60145, 8000, 8002, 8080];
+            
+            for (let i = 0; i < ports.length; i++) {
+                const port = ports[i];
+                
+                try {
+                    console.log(`🔍 Testing port ${port} (${i + 1}/${ports.length})`);
+                    
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => {
+                        console.log(`⏰ Timeout for port ${port}`);
+                        controller.abort();
+                    }, 4000);
+                    
+                    const response = await fetch(`http://localhost:${port}/health`, {
+                        method: 'GET',
+                        mode: 'cors',
+                        signal: controller.signal,
+                        headers: {
+                            'Accept': 'application/json',
+                        }
+                    });
+                    
+                    clearTimeout(timeoutId);
+                    
+                    if (response.ok) {
+                        const data = await response.json();
+                        backendUrl = `http://localhost:${port}`;
+                        backendPort = port;
+                        
+                        console.log(`✅ Backend found on port ${port}`, data);
+                        updateConnectionStatus(true, port);
+                        
+                        if (backendPortEl) {
+                            backendPortEl.textContent = port;
+                            backendPortEl.style.color = '#27ae60';
+                        }
+                        
+                        // Test all connections
+                        await testAllConnections();
+                        return; // Success, exit the loop
+                    } else {
+                        console.log(`❌ Port ${port}: HTTP ${response.status}`);
+                    }
+                } catch (error) {
+                    console.log(`❌ Port ${port}: ${error.message}`);
+                    if (error.name === 'AbortError') {
+                        console.log(`⏰ Port ${port} timed out`);
+                    }
+                }
+            }
+            
+            // If we get here, no backend was found
+            console.error('❌ No backend found on any port');
+            updateConnectionStatus(false);
+            
+            if (backendPortEl) {
+                backendPortEl.textContent = 'Not found';
+                backendPortEl.style.color = '#e74c3c';
+            }
+        }
+
+        // API request function
+        async function apiRequest(endpoint, options = {}) {
+            if (!backendUrl) {
+                throw new Error('Backend not detected');
+            }
+
+            const url = `${backendUrl}${endpoint}`;
+            const config = {
+                mode: 'cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    ...options.headers,
+                },
+                ...options,
+            };
+
+            console.log(`🌐 API Request: ${options.method || 'GET'} ${url}`);
+            
+            const response = await fetch(url, config);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            return await response.json();
+        }
+
+        // Test functions
+        async function testAllConnections() {
+            console.log('🧪 Testing all connections...');
+            
+            try {
+                // Test backend health
+                const health = await apiRequest('/health');
+                document.getElementById('backend-status').textContent = '✅ Online';
+                document.getElementById('backend-status').style.color = '#27ae60';
+                
+                // Test database
+                try {
+                    const dbTest = await apiRequest('/api/test-db');
+                    document.getElementById('db-status').textContent = '✅ Connected';
+                    document.getElementById('db-status').style.color = '#27ae60';
+                } catch (error) {
+                    document.getElementById('db-status').textContent = '❌ Error';
+                    document.getElementById('db-status').style.color = '#e74c3c';
+                }
+                
+                // Test Redis
+                try {
+                    const redisTest = await apiRequest('/api/test-redis');
+                    document.getElementById('redis-status').textContent = '✅ Connected';
+                    document.getElementById('redis-status').style.color = '#27ae60';
+                } catch (error) {
+                    document.getElementById('redis-status').textContent = '❌ Error';
+                    document.getElementById('redis-status').style.color = '#e74c3c';
+                }
+                
+                // Test OpenAI
+                try {
+                    const openaiTest = await apiRequest('/api/test-openai');
+                    if (openaiTest.api_key_valid) {
+                        document.getElementById('openai-status').textContent = '✅ Connected';
+                        document.getElementById('openai-status').style.color = '#27ae60';
+                    } else {
+                        document.getElementById('openai-status').textContent = '⚠️ Invalid Key';
+                        document.getElementById('openai-status').style.color = '#f39c12';
+                    }
+                } catch (error) {
+                    document.getElementById('openai-status').textContent = '❌ Error';
+                    document.getElementById('openai-status').style.color = '#e74c3c';
+                }
+                
+            } catch (error) {
+                document.getElementById('backend-status').textContent = '❌ Offline';
+                document.getElementById('backend-status').style.color = '#e74c3c';
+                console.error('Connection test failed:', error);
+            }
+        }
+
+        async function testDatabase() {
+            showLoading('test-results');
+            try {
+                const result = await apiRequest('/api/test-db');
+                showResults('test-results', 'success', 'Database Test', result);
+            } catch (error) {
+                showResults('test-results', 'error', 'Database Test Failed', { error: error.message });
+            }
+        }
+
+        async function testRedis() {
+            showLoading('test-results');
+            try {
+                const result = await apiRequest('/api/test-redis');
+                showResults('test-results', 'success', 'Redis Test', result);
+            } catch (error) {
+                showResults('test-results', 'error', 'Redis Test Failed', { error: error.message });
+            }
+        }
+
+        async function testOpenAI() {
+            showLoading('test-results');
+            try {
+                const result = await apiRequest('/api/test-openai');
+                showResults('test-results', result.api_key_valid ? 'success' : 'error', 'OpenAI Test', result);
+            } catch (error) {
+                showResults('test-results', 'error', 'OpenAI Test Failed', { error: error.message });
+            }
+        }
+
+        // Full implementation of frontend features
+        async function uploadDocuments() {
+            const fileInput = document.getElementById('file-input');
+            
+            if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+                showResults('upload-results', 'error', 'Upload Error', { 
+                    message: 'Please select files to upload',
+                    supported_formats: ['PDF', 'DOCX', 'TXT']
+                });
+                return;
+            }
+            
+            showLoading('upload-results');
+            
+            try {
+                const formData = new FormData();
+                
+                // Add all selected files
+                for (let i = 0; i < fileInput.files.length; i++) {
+                    formData.append('files', fileInput.files[i]);
+                }
+                
+                console.log(`📤 Uploading ${fileInput.files.length} files...`);
+                
+                const response = await fetch(`${backendUrl}/api/documents/upload`, {
+                    method: 'POST',
+                    mode: 'cors',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Upload failed: ${response.status} ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                
+                // Show detailed upload results
+                showResults('upload-results', 'success', 'Upload Complete', {
+                    ...result,
+                    uploaded_files: result.files?.map(f => ({
+                        name: f.original_name || f.filename,
+                        size: f.file_size ? `${(f.file_size / 1024).toFixed(1)} KB` : 'Unknown',
+                        status: f.status,
+                        type: f.file_type,
+                        preview: f.text_preview
+                    }))
+                });
+                
+                // Clear the file input
+                fileInput.value = '';
+                
+                // Refresh document list if we're on the documents page
+                if (currentPage === 'documents') {
+                    setTimeout(loadDocumentsList, 1000);
+                }
+                
+            } catch (error) {
+                console.error('Upload error:', error);
+                showResults('upload-results', 'error', 'Upload Failed', { 
+                    error: error.message,
+                    suggestion: 'Check file formats (PDF, DOCX, TXT) and file sizes'
+                });
+            }
+        }
+
+        async function searchDocuments() {
+            const searchInput = document.getElementById('search-input');
+            const query = searchInput?.value?.trim();
+            
+            if (!query) {
+                showResults('search-results', 'error', 'Search Error', { 
+                    message: 'Please enter a search query',
+                    examples: ['CSRD requirements', 'climate emissions', 'governance structures']
+                });
+                return;
+            }
+            
+            showLoading('search-results');
+            
+            try {
+                console.log(`🔍 Searching for: "${query}"`);
+                
+                const result = await apiRequest('/api/search', {
+                    method: 'POST',
+                    body: JSON.stringify({ query })
+                });
+                
+                // Format search results for display
+                const formattedResults = {
+                    ...result,
+                    formatted_results: result.results?.map(r => ({
+                        ...r,
+                        content_preview: r.content?.substring(0, 300) + (r.content?.length > 300 ? '...' : ''),
+                        relevance_percentage: Math.round(r.relevance_score * 100),
+                        document_link: `#document-${r.id}`
+                    }))
+                };
+                
+                showResults('search-results', 'success', `Search Results (${result.total} found)`, formattedResults);
+                
+                // Add click handlers for result items
+                setTimeout(() => {
+                    const resultElements = document.querySelectorAll('[data-result-id]');
+                    resultElements.forEach(el => {
+                        el.style.cursor = 'pointer';
+                        el.onclick = () => {
+                            const resultId = el.getAttribute('data-result-id');
+                            console.log(`📄 Clicked result: ${resultId}`);
+                        };
+                    });
+                }, 100);
+                
+            } catch (error) {
+                console.error('Search error:', error);
+                showResults('search-results', 'error', 'Search Failed', { 
+                    error: error.message,
+                    query: query,
+                    suggestion: 'Try different keywords or check backend connection'
+                });
+            }
+        }
+
+        async function askQuestion() {
+            const questionInput = document.getElementById('question-input');
+            const modelSelect = document.getElementById('model-select');
+            
+            const question = questionInput?.value?.trim();
+            const model = modelSelect?.value || 'openai';
+            
+            if (!question) {
+                showResults('rag-results', 'error', 'Question Required', { 
+                    message: 'Please enter a question',
+                    examples: [
+                        'What are the CSRD reporting requirements?',
+                        'How do I calculate Scope 3 emissions?',
+                        'What governance structures are needed for sustainability?'
+                    ]
+                });
+                return;
+            }
+            
+            showLoading('rag-results');
+            
+            try {
+                console.log(`🤖 Asking ${model}: "${question}"`);
+                
+                const result = await apiRequest('/api/rag/query', {
+                    method: 'POST',
+                    body: JSON.stringify({ question, model })
+                });
+                
+                // Format RAG response for better display
+                const formattedResult = {
+                    ...result,
+                    answer_formatted: result.answer?.replace(/\n/g, '<br>'),
+                    sources_formatted: result.sources?.map(s => ({
+                        ...s,
+                        relevance_percentage: Math.round(s.relevance * 100),
+                        document_preview: s.document?.substring(0, 50) + '...'
+                    })),
+                    metadata: {
+                        model_used: result.model_used,
+                        response_time: result.response_time_ms ? `${result.response_time_ms}ms` : 'N/A',
+                        estimated_tokens: Math.round(result.tokens_used || 0),
+                        question_length: question.length
+                    }
+                };
+                
+                showResults('rag-results', 'success', `AI Response (${model})`, formattedResult);
+                
+                // Clear the question input for next query
+                if (questionInput) {
+                    questionInput.value = '';
+                }
+                
+            } catch (error) {
+                console.error('RAG error:', error);
+                showResults('rag-results', 'error', 'AI Query Failed', { 
+                    error: error.message,
+                    question: question,
+                    model: model,
+                    suggestion: 'Check AI model configuration and backend connection'
+                });
+            }
+        }
+
+        async function generateReport() {
+            const templateSelect = document.getElementById('template-select');
+            const template = templateSelect?.value || 'eu_esrs';
+            
+            showLoading('report-results');
+            
+            try {
+                console.log(`📋 Generating ${template} report...`);
+                
+                const result = await apiRequest('/api/reports/generate', {
+                    method: 'POST',
+                    body: JSON.stringify({ template })
+                });
+                
+                // Format report result for display
+                const formattedResult = {
+                    ...result,
+                    generation_time: new Date(result.generated_at * 1000).toLocaleString(),
+                    template_info: {
+                        id: result.template,
+                        name: result.template_name,
+                        pages: result.pages,
+                        sections: result.sections
+                    },
+                    download_info: {
+                        available: !!result.download_url,
+                        url: result.download_url,
+                        format: 'PDF'
+                    }
+                };
+                
+                showResults('report-results', 'success', 'Report Generated', formattedResult);
+                
+                // Add download and preview buttons if URLs are available
+                setTimeout(() => {
+                    const resultsEl = document.getElementById('report-results');
+                    if (resultsEl) {
+                        const buttonContainer = document.createElement('div');
+                        buttonContainer.style.marginTop = '15px';
+                        
+                        if (result.download_url) {
+                            const downloadBtn = document.createElement('button');
+                            downloadBtn.className = 'btn btn-success';
+                            downloadBtn.textContent = '📥 Download PDF';
+                            downloadBtn.onclick = () => {
+                                window.open(`${backendUrl}${result.download_url}`, '_blank');
+                            };
+                            buttonContainer.appendChild(downloadBtn);
+                        }
+                        
+                        if (result.preview_url) {
+                            const previewBtn = document.createElement('button');
+                            previewBtn.className = 'btn btn-primary';
+                            previewBtn.textContent = '👁️ Preview Report';
+                            previewBtn.style.marginLeft = '10px';
+                            previewBtn.onclick = () => {
+                                window.open(`${backendUrl}${result.preview_url}`, '_blank');
+                            };
+                            buttonContainer.appendChild(previewBtn);
+                        }
+                        
+                        resultsEl.appendChild(buttonContainer);
+                    }
+                }, 100);
+                
+            } catch (error) {
+                console.error('Report generation error:', error);
+                showResults('report-results', 'error', 'Report Generation Failed', { 
+                    error: error.message,
+                    template: template,
+                    suggestion: 'Check template configuration and backend connection'
+                });
+            }
+        }
+
+        // Enhanced document list loading
+        async function loadDocumentsList() {
+            try {
+                const result = await apiRequest('/api/documents');
+                
+                const documentsListEl = document.getElementById('documents-list');
+                if (documentsListEl && result.documents) {
+                    let html = '<h3>Document Library</h3>';
+                    
+                    if (result.documents.length === 0) {
+                        html += '<p>No documents uploaded yet. Use the upload section above to add documents.</p>';
+                    } else {
+                        html += `<p>Found ${result.total} documents:</p>`;
+                        html += '<div class="documents-grid">';
+                        
+                        result.documents.forEach(doc => {
+                            const statusColor = doc.status === 'processed' ? '#27ae60' : 
+                                              doc.status === 'sample' ? '#f39c12' : '#3498db';
+                            
+                            html += `
+                                <div class="document-card" style="border: 1px solid #ddd; padding: 15px; margin: 10px 0; border-radius: 8px;">
+                                    <h4>${doc.original_name || doc.name}</h4>
+                                    <p><strong>Type:</strong> ${doc.type?.toUpperCase()}</p>
+                                    <p><strong>Size:</strong> ${doc.size}</p>
+                                    <p><strong>Uploaded:</strong> ${doc.uploaded_formatted || new Date(doc.uploaded * 1000).toLocaleDateString()}</p>
+                                    <p><strong>Status:</strong> <span style="color: ${statusColor};">${doc.status}</span></p>
+                                    ${doc.schema ? `<p><strong>Schema:</strong> ${doc.schema}</p>` : ''}
+                                    ${doc.note ? `<p><em>${doc.note}</em></p>` : ''}
+                                </div>
+                            `;
+                        });
+                        
+                        html += '</div>';
+                    }
+                    
+                    documentsListEl.innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Failed to load documents:', error);
+            }
+        }
+
+        // Utility functions
+        function showLoading(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerHTML = '<div class="status info">Loading...</div>';
+            }
+        }
+
+        function showResults(elementId, type, title, data) {
+            const element = document.getElementById(elementId);
+            if (!element) return;
+            
+            let html = `<div class="status ${type}"><h4>${title}</h4>`;
+            
+            // Enhanced display for different data types
+            if (elementId === 'search-results' && data.formatted_results) {
+                html += `<p><strong>Query:</strong> "${data.query}" | <strong>Results:</strong> ${data.total} | <strong>Time:</strong> ${data.search_time_ms || 0}ms</p>`;
+                
+                data.formatted_results.forEach((result, index) => {
+                    html += `
+                        <div class="result-item" data-result-id="${result.id}" style="border-left: 4px solid #3498db; padding: 10px; margin: 10px 0; background: #f8f9fa;">
+                            <h5>📄 ${result.document} (${result.relevance_percentage}% match)</h5>
+                            <p>${result.content_preview}</p>
+                            <small>Page ${result.page} | Section: ${result.section || 'N/A'} | Schema: ${result.schema}</small>
+                        </div>
+                    `;
+                });
+            } else if (elementId === 'rag-results' && data.answer_formatted) {
+                html += `
+                    <div class="rag-response" style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h5>🤖 AI Response:</h5>
+                        <div style="line-height: 1.6; margin: 10px 0;">${data.answer_formatted}</div>
+                    </div>
+                `;
+                
+                if (data.sources_formatted && data.sources_formatted.length > 0) {
+                    html += `<h5>📚 Sources:</h5>`;
+                    data.sources_formatted.forEach(source => {
+                        html += `
+                            <div style="border: 1px solid #ddd; padding: 8px; margin: 5px 0; border-radius: 4px;">
+                                📄 ${source.document} (Page ${source.page}) - ${source.relevance_percentage}% relevance
+                            </div>
+                        `;
+                    });
+                }
+                
+                if (data.metadata) {
+                    html += `
+                        <div style="margin-top: 15px; padding: 10px; background: #e9ecef; border-radius: 4px;">
+                            <small>
+                                <strong>Model:</strong> ${data.metadata.model_used} | 
+                                <strong>Response Time:</strong> ${data.metadata.response_time} | 
+                                <strong>Tokens:</strong> ~${data.metadata.estimated_tokens}
+                            </small>
+                        </div>
+                    `;
+                }
+            } else if (elementId === 'upload-results' && data.uploaded_files) {
+                html += `<p><strong>Status:</strong> ${data.message}</p>`;
+                html += `<p><strong>Total Files:</strong> ${data.total_files} | <strong>Successful:</strong> ${data.uploaded_files.length}</p>`;
+                
+                data.uploaded_files.forEach(file => {
+                    const statusIcon = file.status === 'uploaded' ? '✅' : file.status === 'error' ? '❌' : '⏳';
+                    html += `
+                        <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 4px;">
+                            ${statusIcon} <strong>${file.name}</strong> (${file.size}) - ${file.type?.toUpperCase()}
+                            ${file.preview ? `<br><small>Preview: ${file.preview.substring(0, 100)}...</small>` : ''}
+                        </div>
+                    `;
+                });
+            } else if (elementId === 'report-results' && data.template_info) {
+                html += `
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 10px 0;">
+                        <h5>📋 ${data.template_info.name}</h5>
+                        <p><strong>Report ID:</strong> ${data.report_id}</p>
+                        <p><strong>Generated:</strong> ${data.generation_time}</p>
+                        <p><strong>Pages:</strong> ${data.template_info.pages} | <strong>Sections:</strong> ${data.template_info.sections?.length || 0}</p>
+                        
+                        <h6>📑 Sections:</h6>
+                        <ul>
+                            ${data.template_info.sections?.map(section => `<li>${section}</li>`).join('') || '<li>No sections available</li>'}
+                        </ul>
+                    </div>
+                `;
+            } else {
+                // Default JSON display for other data
+                html += `<pre style="background: #f8f9fa; padding: 10px; border-radius: 4px; overflow-x: auto;">${JSON.stringify(data, null, 2)}</pre>`;
+            }
+            
+            html += '</div>';
+            element.innerHTML = html;
+        }
+
+        // Enhanced UX features
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', (e) => {
+                // Ctrl/Cmd + Enter to submit forms
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    const activeElement = document.activeElement;
+                    
+                    if (activeElement.id === 'search-input') {
+                        e.preventDefault();
+                        searchDocuments();
+                    } else if (activeElement.id === 'question-input') {
+                        e.preventDefault();
+                        askQuestion();
+                    }
+                }
+                
+                // Escape to clear results
+                if (e.key === 'Escape') {
+                    const resultsElements = document.querySelectorAll('[id$="-results"]');
+                    resultsElements.forEach(el => {
+                        if (el.innerHTML.trim()) {
+                            el.innerHTML = '';
+                        }
+                    });
+                }
+            });
+        }
+
+        function setupEnterKeyHandlers() {
+            // Enter key for search
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) {
+                searchInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        searchDocuments();
+                    }
+                });
+            }
+        }
+
+        function addLoadingStates() {
+            // Add loading states to buttons
+            const buttons = document.querySelectorAll('.btn');
+            buttons.forEach(btn => {
+                const originalOnClick = btn.onclick;
+                if (originalOnClick) {
+                    btn.onclick = async function(e) {
+                        const originalText = btn.textContent;
+                        btn.textContent = '⏳ Loading...';
+                        btn.disabled = true;
+                        
+                        try {
+                            await originalOnClick.call(this, e);
+                        } finally {
+                            btn.textContent = originalText;
+                            btn.disabled = false;
+                        }
+                    };
+                }
+            });
+        }
+
+        // Initialize - Enhanced version
+        window.addEventListener('load', () => {
+            console.log('📄 Page fully loaded, starting enhanced app...');
+            
+            // Setup navigation
+            setupNavigation();
+            
+            // Setup keyboard shortcuts
+            setupKeyboardShortcuts();
+            
+            // Setup enter key handlers
+            setupEnterKeyHandlers();
+            
+            // Add loading states
+            addLoadingStates();
+            
+            // Load dashboard
+            loadPage('dashboard');
+            
+            // Auto-detect backend
+            setTimeout(() => {
+                detectBackend();
+            }, 1000);
+        });
+
+        console.log('✅ Enhanced CSRD RAG System setup complete');
+    </script>
+</body>
+</html>
